@@ -145,6 +145,8 @@ function parse_args(){
     local short_opts='h,l:,r:,v'
     local long_opts='help,log:,required:,verbose'
 
+    # set -x # remove comment to troubleshoot
+
     # -use ! and PIPESTATUS to get exit code with errexit set
     # -temporarily store output to be able to check for errors
     # -activate quoting/enhanced mode (e.g. by writing out “--options”)
@@ -219,7 +221,7 @@ function main(){
     debug="false"
     verbose="false"
     pos_arguments="true"
-#     pos_arguments="false"
+    # pos_arguments="false"
 
     echo_color_init
     parse_args "$@"
