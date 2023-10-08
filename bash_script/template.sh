@@ -9,8 +9,10 @@
 #####################################################################
 
 # Required binaries:
-# - getopt
-#
+# Creating variable to validate binaries.
+REQUIRED_BINARIES="
+getopt
+"
 
 # Notes:
 #
@@ -115,6 +117,30 @@ function ctrl_c() {
     exit 2
 }
 
+
+# DESC: Validates script has access to the specified binaries.
+# ARGS:
+function validate_binaries() {
+
+    debug "Validating binaries for script."
+
+    for req_bin in ${REQUIRED_BINARIES}
+    do
+        path_to_bin=$(which ${req_bin})
+        validation_exit_code=$(echo $?)
+        if [[ ${validation_exit_code} != 0 ]]
+        then
+            error "Could not locate ${req_bin} binary"
+            exit 1
+        else
+            debug "Validating ${req_bin}::${path_to_bin}"
+        fi
+    done
+
+    return 0
+}
+
+
 # DESC: Usage help
 # ARGS: None
 usage(){
@@ -130,9 +156,9 @@ usage(){
     \r-l, --log <file>\t Log file.
 	\r-r, --required\t\t Argument that is required..
 	\r-v, --verbose\t\t Verbosity.
-    \r             \t\t -v info
-    \r             \t\t -vv debug
-    \r             \t\t -vv bash debug
+    \r             \t\t\t -v info
+    \r             \t\t\t -vv debug
+    \r             \t\t\t -vvv bash debug
 	"
 
     return 0
@@ -170,9 +196,17 @@ function parse_args(){
 
     # Getting positional args
     if [[ "${pos_arguments}" == "true" ]]; then
+
+        # Save current IFS (Internal Field Separator)
         OLD_IFS=$IFS
+
+        # Getting all values right of '--'
         POSITIONAL_ARGS=${PARSED#*"--"}
+
+        # Setting IFS to a space, creating array
         IFS=' ' read -r -a positional_args <<< "${POSITIONAL_ARGS}"
+
+        # Restore original IFS
         IFS=$OLD_IFS
     fi
 
@@ -220,14 +254,16 @@ function main(){
     # Any default values go here
     debug="false"
     verbose="false"
-    pos_arguments="true"
-    # pos_arguments="false"
+#     pos_arguments="true"
+     pos_arguments="false"
 
     echo_color_init
     parse_args "$@"
 
     debug "
-    out_file:        \t ${outfile}
+    bash_debug:     \t ${debug}
+    positional_args:\t ${pos_arguments}
+    verbosity:      \t ${verbosity}
     "
 
     # Getting positional arguments
@@ -235,6 +271,16 @@ function main(){
         OLD_IFS=$IFS
         IFS=' ' read -r -a pos_args <<< "${POSITIONAL_ARGS[@]}"
         IFS=${OLD_IFS}
+        if [[ $(echo ${pos_args[@]} | grep -c '\-\-') -gt 0 ]]
+        then
+            debug "Getting property $pos_args[@]"
+            # Getting everything to the right of the '--'
+            tmp="${pos_args[@]}"
+            IFS=' ' read -r -a pos_args <<< "${tmp#*"--"}"
+            IFS=${OLD_IFS}
+        fi
+
+         # debug "Positional arguements are:: $(echo ${pos_args[@]})"
     fi
 
     # Run in debug mode, if set
@@ -254,6 +300,9 @@ function main(){
     #    exit 3
     #fi
 
+    # Validate required binaries for script
+    validate_binaries
+
     debug "Starting script"
 
     info "This is an info log message"
@@ -266,14 +315,14 @@ function main(){
     # if not need you can remove
     if [[ "${pos_arguments}" == "true" ]]; then
         pos_arg_count=0
-        len=${#pos_args[@]}
-        if [[ ${len} == 0 ]]
+        pos_arg_len=${#pos_args[@]}
+        if [[ ${pos_arg_len} == 0 ]]
         then
             debug "No positional argument passed if required."
             usage
             exit 1
         else
-            while [ $pos_arg_count -lt $len ];
+            while [ ${pos_arg_count} -lt ${pos_arg_len} ];
             do
                 debug "Working with positional arg:: ${pos_args[$pos_arg_count]}"
                 result+=$(echo "${pos_args[$pos_arg_count]}" | tr -d "'")
